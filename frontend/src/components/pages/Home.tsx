@@ -17,7 +17,7 @@ export default function Home() {
             </span>
           </h1>
           
-          <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-l text-gray-600 max-w-2xl mx-auto">
             {isAuthenticated
               ? `Welcome back, ${user?.email}! Your dashboard is ready.`
               : 'A modern system built with React and NestJS. Sign up to get started.'}

@@ -17,8 +17,10 @@ type AuthContextType = {
   isLoading: boolean
   hasRole: (role: string | string[]) => boolean
   login: (email: string, password: string) => Promise<void>
+  googleLogin: (credential: string) => Promise<void>
   logout: () => Promise<void>
   error: string | null
+  isAuthenticating: boolean // added
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -72,6 +74,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       } catch {
         clearTokens()
         setUser(null)
+        window.location.href = '/login' // ensure redirect on refresh failure
       }
     }, delayMs)
   }
@@ -97,6 +100,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       } catch {
         clearTokens()
         setUser(null)
+        window.location.href = '/login' // ensure redirect on refresh failure
       } finally {
         if (!cancelled) setInitializing(false)
       }
@@ -149,6 +153,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
   })
 
+  const googleLoginMutation = useMutation({
+    mutationFn: authApi.googleLogin,
+    onSuccess: (data) => {
+      setUser(data.user)
+      setError(null)
+      scheduleProactiveRefresh(data.accessToken)
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+      navigate('/dashboard')
+    },
+    onError: (err: any) => {
+      const message = err?.response?.data?.message || err.message || 'Google login failed'
+      setError(message)
+    },
+  })
+
   const logoutMutation = useMutation({
     mutationFn: authApi.logout,
     onSuccess: () => {
@@ -156,13 +175,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setUser(null)
       setError(null)
       queryClient.clear()
-      navigate('/home')
+      navigate('/login') // redirect to login after logout
     },
   })
 
   const login = async (email: string, password: string) => {
     setError(null)
     await loginMutation.mutateAsync({ email, password })
+  }
+
+  const googleLogin = async (credential: string) => {
+    setError(null)
+    await googleLoginMutation.mutateAsync({ credential })
   }
 
   const logout = async () => {
@@ -181,8 +205,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     isLoading: initializing || isProfileLoading,
     hasRole,
     login,
+    googleLogin,
     logout,
     error,
+    isAuthenticating: loginMutation.isPending || googleLoginMutation.isPending, // added
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

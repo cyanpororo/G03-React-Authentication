@@ -18,7 +18,10 @@ export function RoleProtectedRoute({ children, allowedRoles }: Props) {
     )
   }
 
-  // Check roles first to show "Access Denied" instead of redirecting
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
   if (!hasRole(allowedRoles)) {
     return (
       <div className="flex min-h-screen items-center justify-center px-4">
@@ -28,10 +31,6 @@ export function RoleProtectedRoute({ children, allowedRoles }: Props) {
         </Alert>
       </div>
     )
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
   }
 
   return <>{children}</>
